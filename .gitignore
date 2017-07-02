@@ -1,3 +1,3 @@
-*.cm*
+_build
 *.byte
 *.native
