@@ -69,8 +69,11 @@ type ('op, 'reg) insn_t = { op : 'op; dst : 'reg; src : 'reg; off : int16; imm :
 type insn = (op, reg) insn_t
 
 let make ?(dst=R0) ?(src=R0) ?(off=0) ?(imm=0) op =
+  (* simple sanity checks *)
   assert (off >= 0);
-  assert (off < 65536);
+  assert (off < 65_536);
+  assert (imm >= 0);
+  assert (imm < 4_294_967_296);
   { op; dst; src; off; imm = Int32.of_int imm; }
 
 type cond = [ `EQ | `GT | `GE | `SET | `NE | `SGT | `SGE ]
@@ -93,8 +96,6 @@ let prim ?dst ?src ?off ?imm op = Prim (make ?dst ?src ?off ?imm op)
 let unprim = function Prim x -> x | _ -> assert false
 
 let ldx size dst (src,off) = prim (LDX (size, MEM)) ~dst ~src ~off
-let movi dst imm = prim (ALU64 (SRC_IMM, MOV)) ~dst ~imm
-let mov ~dst ~src = prim (ALU64 (SRC_REG, MOV)) ~dst ~src
 let jump_ off = prim (JMP (SRC_IMM, JA)) ~off
 let jmpi_ off reg cond imm = prim (JMP (SRC_IMM, op_of_cond cond)) ~dst:reg ~off ~imm
 let jmp_ off a cond b = prim (JMP (SRC_REG, op_of_cond cond)) ~dst:a ~src:b ~off
@@ -104,6 +105,40 @@ let call imm = prim (JMP (SRC_IMM, CALL)) ~imm
 let jump label = Jump (label, unprim @@ jump_ 0)
 let jmpi label reg cond imm = Jump (label, unprim @@ jmpi_ 0 reg cond imm)
 let jmp off a cond b = Jump (label, unprim @@ jmp_ 0 a cond b)
+
+module ALU(T : sig val alu_op : source -> op_alu -> op end) = struct
+
+let alu_r op dst src = prim (T.alu_op SRC_REG op) ~dst ~src
+let alu_i op dst imm = prim (T.alu_op SRC_IMM op) ~dst ~imm
+let alu op = (alu_r op, alu_i op)
+
+let add, addi = alu ADD
+let sub, subi = alu SUB
+let mul, muli = alu MUL
+let div, divi = alu DIV
+let or_, ori = alu OR
+let and_, andi = alu AND
+let lsh, lshi = alu LSH
+let rsh, rshi = alu RSH
+let neg, negi = alu NEG
+let mod_, modi = alu MOD
+let xor, xori = alu XOR
+let mov, movi = alu MOV
+let arsh, arshi = alu ARSH
+
+end
+
+module I64 = ALU(struct let alu_op s op = ALU64 (s,op) end)
+module I32 = ALU(struct let alu_op s op = ALU (s,op) end)
+
+include I64
+
+let endian_ source imm dst = prim (ALU (source, END)) ~dst ~imm
+let endian imm = (endian_ SRC_IMM imm, endian_ SRC_REG imm)
+
+let le16, be16 = endian 16
+let le32, be32 = endian 32
+let le64, be64 = endian 64
 
 module Bits = struct
 
