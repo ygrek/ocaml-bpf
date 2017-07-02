@@ -41,7 +41,20 @@ let tcp_ipv4 =
   jmpi `Drop R2 `NE 6;
   movi R0 1;
 label `Drop;
+  ret;
+]
+
+let test_lddw =
+[
+  ldx DW R2 (R1,0);
+  lddw R3 0xDEADBEEF01020304L;
+  xor R2 R3;
+  ldx DW R1 (R1,8);
+  movi R0 1;
+  jmp `Exit R2 `EQ R1;
+  movi R0 0;
+label `Exit;
   ret
 ]
 
-let () = tcp_ipv4 |> assemble |> print_string
+let () = test_lddw |> assemble |> print_string

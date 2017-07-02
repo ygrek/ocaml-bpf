@@ -90,12 +90,18 @@ type 'label cfg =
 | Prim of insn (* valid instruction *)
 | Label of 'label (* marker, no instruction *)
 | Jump of 'label * insn (* to patch offset field *)
+| Double of insn * insn (* eBPF has one 16-byte instruction: BPF_LD | BPF_DW | BPF_IMM *)
 
 let label x = Label x
 let prim ?dst ?src ?off ?imm op = Prim (make ?dst ?src ?off ?imm op)
 let unprim = function Prim x -> x | _ -> assert false
 
 let ldx size dst (src,off) = prim (LDX (size, MEM)) ~dst ~src ~off
+let lddw dst imm = Double (
+  make (LD (DW, IMM)) ~dst ~imm:(Int64.to_int @@ Int64.logand imm 0xFFFFFFFFL),
+  make (LD (W, IMM)) ~imm:(Int64.to_int @@ Int64.shift_right_logical imm 32)) (* pseudo-insn *)
+let stx size (dst,off) src = prim (STX (size, MEM)) ~dst ~src ~off
+let st size (dst,off) imm = prim (ST (size, IMM)) ~dst ~off ~imm
 let jump_ off = prim (JMP (SRC_IMM, JA)) ~off
 let jmpi_ off reg cond imm = prim (JMP (SRC_IMM, op_of_cond cond)) ~dst:reg ~off ~imm
 let jmp_ off a cond b = prim (JMP (SRC_REG, op_of_cond cond)) ~dst:a ~src:b ~off
@@ -104,7 +110,7 @@ let call imm = prim (JMP (SRC_IMM, CALL)) ~imm
 
 let jump label = Jump (label, unprim @@ jump_ 0)
 let jmpi label reg cond imm = Jump (label, unprim @@ jmpi_ 0 reg cond imm)
-let jmp off a cond b = Jump (label, unprim @@ jmp_ 0 a cond b)
+let jmp label a cond b = Jump (label, unprim @@ jmp_ 0 a cond b)
 
 module ALU(T : sig val alu_op : source -> op_alu -> op end) = struct
 
@@ -190,12 +196,13 @@ let emit insns =
   List.iteri (fun i insn -> blit b (8*i) insn) insns;
   Bytes.unsafe_to_string b
 
-let resolve_labels l =
+let resolve l =
   let labels = Hashtbl.create 7 in
   (* collect *)
   let (_:int) = List.fold_left begin fun pc x ->
     match x with
     | Prim _ | Jump _ -> pc + 1
+    | Double _ -> pc + 2
     | Label x ->
       match Hashtbl.find labels x with
       | prev -> fail "Duplicate label at PC %d (previous at %d)" pc prev
@@ -205,13 +212,14 @@ let resolve_labels l =
   (* resolve *)
   List.rev @@ snd @@ List.fold_left begin fun (pc,prog) x ->
     match x with
-    | Prim insn -> (pc+1,insn::prog)
+    | Prim insn -> (pc + 1, insn :: prog)
     | Label _ -> (pc,prog)
+    | Double (i1, i2) -> (pc + 2, i2 :: i1 :: prog)
     | Jump (label,insn) ->
       match Hashtbl.find labels label with
       | exception Not_found -> fail "Target label at PC %d not found" pc
       | target when target <= pc -> fail "Target label at PC %d points backwards (to PC %d)" pc target
-      | target -> (pc+1, { insn with off = target - (pc + 1) } :: prog)
+      | target -> (pc + 1, { insn with off = target - (pc + 1) } :: prog)
   end (0,[]) l
 
-let assemble l = emit @@ List.map encode @@ resolve_labels l
+let assemble l = emit @@ List.map encode @@ resolve l
