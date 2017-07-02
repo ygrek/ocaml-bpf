@@ -66,7 +66,7 @@ type int16 = int (* FIXME *)
 
 (** represents any 64-bit value, i.e. also invalid instructions *)
 type ('op, 'reg) insn_t = { op : 'op; dst : 'reg; src : 'reg; off : int16; imm : int32; }
-type insn = (op, reg) insn_t
+type prim = (op, reg) insn_t
 
 let make ?(dst=R0) ?(src=R0) ?(off=0) ?(imm=0) op =
   (* simple sanity checks *)
@@ -86,11 +86,11 @@ let op_of_cond = function
 | `SGT -> JSGT
 | `SGE -> JSGE
 
-type 'label cfg =
-| Prim of insn (* valid instruction *)
+type 'label insn =
+| Prim of prim (* valid instruction *)
 | Label of 'label (* marker, no instruction *)
-| Jump of 'label * insn (* to patch offset field *)
-| Double of insn * insn (* eBPF has one 16-byte instruction: BPF_LD | BPF_DW | BPF_IMM *)
+| Jump of 'label * prim (* to patch offset field *)
+| Double of prim * prim (* eBPF has one 16-byte instruction: BPF_LD | BPF_DW | BPF_IMM *)
 
 let label x = Label x
 let prim ?dst ?src ?off ?imm op = Prim (make ?dst ?src ?off ?imm op)
@@ -112,7 +112,37 @@ let jump label = Jump (label, unprim @@ jump_ 0)
 let jmpi label reg cond imm = Jump (label, unprim @@ jmpi_ 0 reg cond imm)
 let jmp label a cond b = Jump (label, unprim @@ jmp_ 0 a cond b)
 
-module ALU(T : sig val alu_op : source -> op_alu -> op end) = struct
+module type ALU =
+sig
+  val add : reg -> reg -> 'a insn
+  val addi : reg -> int -> 'a insn
+  val sub : reg -> reg -> 'a insn
+  val subi : reg -> int -> 'a insn
+  val mul : reg -> reg -> 'a insn
+  val muli : reg -> int -> 'a insn
+  val div : reg -> reg -> 'a insn
+  val divi : reg -> int -> 'a insn
+  val or_ : reg -> reg -> 'a insn
+  val ori : reg -> int -> 'a insn
+  val and_ : reg -> reg -> 'a insn
+  val andi : reg -> int -> 'a insn
+  val lsh : reg -> reg -> 'a insn
+  val lshi : reg -> int -> 'a insn
+  val rsh : reg -> reg -> 'a insn
+  val rshi : reg -> int -> 'a insn
+  val neg : reg -> reg -> 'a insn
+  val negi : reg -> int -> 'a insn
+  val mod_ : reg -> reg -> 'a insn
+  val modi : reg -> int -> 'a insn
+  val xor : reg -> reg -> 'a insn
+  val xori : reg -> int -> 'a insn
+  val mov : reg -> reg -> 'a insn
+  val movi : reg -> int -> 'a insn
+  val arsh : reg -> reg -> 'a insn
+  val arshi : reg -> int -> 'a insn
+end
+
+module ALU(T : sig val alu_op : source -> op_alu -> op end) : ALU = struct
 
 let alu_r op dst src = prim (T.alu_op SRC_REG op) ~dst ~src
 let alu_i op dst imm = prim (T.alu_op SRC_IMM op) ~dst ~imm
