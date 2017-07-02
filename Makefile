@@ -1,11 +1,14 @@
 .SUFFIXES:
-.PHONY: build
+.PHONY: build doc clean
 
 build:
-	ocamlbuild -use-ocamlfind -I src eBPF.cma eBPF.cmxa test.byte test.native
+	ocaml pkg/pkg.ml build
 
 clean:
-	ocamlbuild -clean
+	ocaml pkg/pkg.ml clean
+
+doc:
+	topkg doc
 
 %.bpf: %.o
 	objcopy -F elf64-little --dump-section .text=$@ $<

@@ -1,7 +1,5 @@
 (**
-  Embedded eBPF assembler
-
-  https://qmonnet.github.io/whirl-offload/2016/09/01/dive-into-bpf/
+  Embedded {{:https://qmonnet.github.io/whirl-offload/2016/09/01/dive-into-bpf/}eBPF} assembler
 *)
 
 (** {2 Types} *)

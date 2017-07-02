@@ -1,0 +1,7 @@
+description = "Embedded eBPF assembler"
+version = "%%VERSION_NUM%%"
+requires = "ppx_deriving"
+archive(byte) = "bpf.cma"
+archive(native) = "bpf.cmxa"
+plugin(byte) = "bpf.cma"
+plugin(native) = "bpf.cmxs"
