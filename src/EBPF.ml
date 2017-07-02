@@ -3,6 +3,8 @@
   https://github.com/iovisor/bpf-docs/blob/master/eBPF.md
 *)
 
+let fail fmt = Printf.ksprintf failwith fmt
+
 type size =
 | W (** word = 4B *)
 | H (** half word = 2B *)
@@ -63,7 +65,8 @@ type op =
 type int16 = int (* FIXME *)
 
 (** represents any 64-bit value, i.e. also invalid instructions *)
-type ('op, 'reg) insn = { op : 'op; dst : 'reg; src : 'reg; off : int16; imm : int32; }
+type ('op, 'reg) insn_t = { op : 'op; dst : 'reg; src : 'reg; off : int16; imm : int32; }
+type insn = (op, reg) insn_t
 
 let make ?(dst=R0) ?(src=R0) ?(off=0) ?(imm=0) op =
   assert (off >= 0);
@@ -80,14 +83,27 @@ let op_of_cond = function
 | `SGT -> JSGT
 | `SGE -> JSGE
 
-let ldx size dst (src,off) = make (LDX (size, MEM)) ~dst ~src ~off
-let movi dst imm = make (ALU64 (SRC_IMM, MOV)) ~dst ~imm
-let mov ~dst ~src = make (ALU64 (SRC_REG, MOV)) ~dst ~src
-let jump off = make (JMP (SRC_IMM, JA)) ~off
-let jmpi off reg cond imm = make (JMP (SRC_IMM, op_of_cond cond)) ~dst:reg ~off ~imm
-let jmp off a cond b = make (JMP (SRC_REG, op_of_cond cond)) ~dst:a ~src:b ~off
-let ret = make (JMP (SRC_IMM, EXIT))
-let call imm = make (JMP (SRC_IMM, CALL)) ~imm
+type 'label cfg =
+| Prim of insn (* valid instruction *)
+| Label of 'label (* marker, no instruction *)
+| Jump of 'label * insn (* to patch offset field *)
+
+let label x = Label x
+let prim ?dst ?src ?off ?imm op = Prim (make ?dst ?src ?off ?imm op)
+let unprim = function Prim x -> x | _ -> assert false
+
+let ldx size dst (src,off) = prim (LDX (size, MEM)) ~dst ~src ~off
+let movi dst imm = prim (ALU64 (SRC_IMM, MOV)) ~dst ~imm
+let mov ~dst ~src = prim (ALU64 (SRC_REG, MOV)) ~dst ~src
+let jump_ off = prim (JMP (SRC_IMM, JA)) ~off
+let jmpi_ off reg cond imm = prim (JMP (SRC_IMM, op_of_cond cond)) ~dst:reg ~off ~imm
+let jmp_ off a cond b = prim (JMP (SRC_REG, op_of_cond cond)) ~dst:a ~src:b ~off
+let ret = prim (JMP (SRC_IMM, EXIT))
+let call imm = prim (JMP (SRC_IMM, CALL)) ~imm
+
+let jump label = Jump (label, unprim @@ jump_ 0)
+let jmpi label reg cond imm = Jump (label, unprim @@ jmpi_ 0 reg cond imm)
+let jmp off a cond b = Jump (label, unprim @@ jmp_ 0 a cond b)
 
 module Bits = struct
 
@@ -139,4 +155,28 @@ let emit insns =
   List.iteri (fun i insn -> blit b (8*i) insn) insns;
   Bytes.unsafe_to_string b
 
-let assemble l = emit @@ List.map encode l
+let resolve_labels l =
+  let labels = Hashtbl.create 7 in
+  (* collect *)
+  let (_:int) = List.fold_left begin fun pc x ->
+    match x with
+    | Prim _ | Jump _ -> pc + 1
+    | Label x ->
+      match Hashtbl.find labels x with
+      | prev -> fail "Duplicate label at PC %d (previous at %d)" pc prev
+      | exception Not_found -> Hashtbl.add labels x pc; pc
+  end 0 l
+  in
+  (* resolve *)
+  List.rev @@ snd @@ List.fold_left begin fun (pc,prog) x ->
+    match x with
+    | Prim insn -> (pc+1,insn::prog)
+    | Label _ -> (pc,prog)
+    | Jump (label,insn) ->
+      match Hashtbl.find labels label with
+      | exception Not_found -> fail "Target label at PC %d not found" pc
+      | target when target <= pc -> fail "Target label at PC %d points backwards (to PC %d)" pc target
+      | target -> (pc+1, { insn with off = target - (pc + 1) } :: prog)
+  end (0,[]) l
+
+let assemble l = emit @@ List.map encode @@ resolve_labels l
