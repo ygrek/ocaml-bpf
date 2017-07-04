@@ -57,4 +57,15 @@ label `Exit;
   ret
 ]
 
-let () = test_lddw |> assemble |> print_string
+(** check that i-th element of the array is not equal to [value] *)
+let not_array i value =
+[
+  ldx DW R2 (R1,i*8);
+  movi R0 0;
+  jmpi `Exit R2 `EQ value;
+  movi R0 1;
+label `Exit;
+  ret
+]
+
+let () = not_array 2 0 |> assemble |> print_string
