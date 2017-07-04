@@ -9,8 +9,9 @@ let arp =
 [
   ldx H R2 (R1,12);
   movi R0 1;
-  jmpi_ 1 R2 `EQ 0x806;
+  jmpi `Exit R2 `EQ 0x806;
   movi R0 0;
+label `Exit;
   ret
 ]
 ```
