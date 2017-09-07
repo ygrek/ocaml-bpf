@@ -69,11 +69,8 @@ type ('op, 'reg) insn_t = { op : 'op; dst : 'reg; src : 'reg; off : int16; imm :
 type prim = (op, reg) insn_t
 
 let make ?(dst=R0) ?(src=R0) ?(off=0) ?(imm=0) op =
-  (* simple sanity checks *)
-  assert (off >= 0);
-  assert (off < 65_536);
-  assert (imm >= 0);
-  assert (imm < 4_294_967_296);
+  (* sanity checks *)
+  if not (0 <= imm && imm < 4_294_967_296) then fail "Bad immediate : %d" imm;
   { op; dst; src; off; imm = Int32.of_int imm; }
 
 type cond = [ `EQ | `GT | `GE | `SET | `NE | `SGT | `SGE ]
@@ -248,8 +245,36 @@ let resolve l =
     | Jump (label,insn) ->
       match Hashtbl.find labels label with
       | exception Not_found -> fail "Target label at PC %d not found" pc
-      | target when target <= pc -> fail "Target label at PC %d points backwards (to PC %d)" pc target
       | target -> (pc + 1, { insn with off = target - (pc + 1) } :: prog)
   end (0,[]) l
 
-let assemble l = emit @@ List.map encode @@ resolve l
+type options = {
+  disable_all_checks : bool;
+  jump_back : bool;
+  jump_self : bool;
+}
+
+let default = {
+  disable_all_checks = false;
+  jump_back = false;
+  jump_self = false;
+}
+
+let check options l =
+  let len = List.length l in
+  match options.disable_all_checks with
+  | true -> ()
+  | false ->
+    l |> List.iteri begin fun pc x ->
+      try
+        if not options.jump_self && x.off = (-1) then fail "jump to self (options.jump_self)";
+        if not options.jump_back && x.off < 0 then fail "jump backwards (options.jump_back)";
+        if not (x.off + pc + 1 >= 0 || x.off + pc + 1 < len) then fail "jump out of bounds : offset %d length %d" x.off len;
+      with
+        Failure s -> fail "Error detected at PC %d : %s" pc s
+    end
+
+let assemble ?(options=default) l =
+  let l = resolve l in
+  check options l;
+  emit @@ List.map encode l
