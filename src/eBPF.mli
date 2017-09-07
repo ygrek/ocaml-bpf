@@ -4,10 +4,23 @@
 
 (** {2 Types} *)
 
-type size = W | H | B | DW
+type size =
+| W (** word = 32 bit *)
+| H (** half-word = 16 bit *)
+| B (** byte *)
+| DW (** double word = 64 bit *)
+
 type reg = R0 | R1 | R2 | R3 | R4 | R5 | R6 | R7 | R8 | R9 | R10
 type int16 = int
-type cond = [ `EQ | `GE | `GT | `NE | `SET | `SGE | `SGT ]
+type cond = [
+  | `EQ (** equal *)
+  | `GE (** greater or equal *)
+  | `GT (** greater than *)
+  | `NE (** not equal *)
+  | `SET (** bitwise AND *)
+  | `SGE (** signed greater or equal *)
+  | `SGT (** signed greater than *)
+]
 
 (** Single eBPF instruction. ['label] is type of labels, can be any hashable type, e.g. [string], [int], open variant, etc *)
 type +'label insn
@@ -21,7 +34,7 @@ val st : size -> reg * int16 -> int -> 'a insn
 
 (** {2 Branch instructions} *)
 
-(** mark label position, each label should unique *)
+(** mark label position, each label should be unique *)
 val label : 'label -> 'label insn
 
 val ret : 'a insn
@@ -30,7 +43,11 @@ val jump : 'label -> 'label insn
 val jmpi : 'label -> reg -> cond -> int -> 'label insn
 val jmp : 'label -> reg -> cond -> reg -> 'label insn
 
-(** raw jump instructions with manually-computed offset, you probably want to use version with labels *)
+(** {3 raw jump instructions with manually-computed offset}
+
+  you probably want to use functions above which take labels
+*)
+
 val jump_ : int16 -> 'a insn
 val jmpi_ : int16 -> reg -> cond -> int -> 'a insn
 val jmp_ : int16 -> reg -> cond -> reg -> 'a insn
