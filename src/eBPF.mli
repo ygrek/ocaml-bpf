@@ -20,6 +20,10 @@ type cond = [
   | `SET (** bitwise AND *)
   | `SGE (** signed greater or equal *)
   | `SGT (** signed greater than *)
+  | `LE (** less or equal *)
+  | `LT (** less than *)
+  | `SLE (** signed less or equal *)
+  | `SLT (** signed less than *)
 ]
 
 (** Single eBPF instruction. ['label] is type of labels, can be any hashable type, e.g. [string], [int], open variant, etc *)

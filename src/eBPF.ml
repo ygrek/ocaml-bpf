@@ -42,6 +42,10 @@ type op_jmp =
 | JSGE  (* eBPF only: signed '>=' *)
 | CALL  (* eBPF only: function call *)
 | EXIT  (* eBPF only: function return *)
+| JLT   (* eBPF only: unsigned '<' *)
+| JLE   (* eBPF only: unsigned '<=' *)
+| JSLT  (* eBPF only: signed '<' *)
+| JSLE  (* eBPF only: signed '<=' *)
 [@@deriving enum]
 
 type source = SRC_IMM | SRC_REG [@@deriving enum]
@@ -73,7 +77,7 @@ let make ?(dst=R0) ?(src=R0) ?(off=0) ?(imm=0) op =
   if not (0 <= imm && imm < 4_294_967_296) then fail "Bad immediate : %d" imm;
   { op; dst; src; off; imm = Int32.of_int imm; }
 
-type cond = [ `EQ | `GT | `GE | `SET | `NE | `SGT | `SGE ]
+type cond = [ `EQ | `GT | `GE | `SET | `NE | `SGT | `SGE | `LT | `LE | `SLT | `SLE ]
 let op_of_cond = function
 | `EQ -> JEQ
 | `GT -> JGT
@@ -82,6 +86,10 @@ let op_of_cond = function
 | `NE -> JNE
 | `SGT -> JSGT
 | `SGE -> JSGE
+| `LT -> JLT
+| `LE -> JLE
+| `SLT -> JSLT
+| `SLE -> JSLE
 
 type 'label insn =
 | Prim of prim (* valid instruction *)
