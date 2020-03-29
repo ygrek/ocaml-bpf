@@ -43,9 +43,15 @@ val label : 'label -> 'label insn
 
 val ret : 'a insn
 val call : int -> 'a insn
+
 val jump : 'label -> 'label insn
 val jmpi : 'label -> reg -> cond -> int -> 'label insn
 val jmp : 'label -> reg -> cond -> reg -> 'label insn
+
+(** same as [jump] but with 32-bit wide operands *)
+val jump32 : 'label -> 'label insn
+val jmp32i : 'label -> reg -> cond -> int -> 'label insn
+val jmp32 : 'label -> reg -> cond -> reg -> 'label insn
 
 (** {3 raw jump instructions with manually-computed offset}
 
@@ -55,6 +61,10 @@ val jmp : 'label -> reg -> cond -> reg -> 'label insn
 val jump_ : int16 -> 'a insn
 val jmpi_ : int16 -> reg -> cond -> int -> 'a insn
 val jmp_ : int16 -> reg -> cond -> reg -> 'a insn
+
+val jump32_ : int16 -> 'a insn
+val jmp32i_ : int16 -> reg -> cond -> int -> 'a insn
+val jmp32_ : int16 -> reg -> cond -> reg -> 'a insn
 
 (** {2 ALU (arithmetic/logic) instructions} *)
 

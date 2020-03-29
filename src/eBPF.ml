@@ -65,6 +65,7 @@ type op =
 | ALU of source * op_alu
 | ALU64 of source * op_alu
 | JMP of source * op_jmp
+| JMP32 of source * op_jmp
 
 type int16 = int (* FIXME *)
 
@@ -110,12 +111,18 @@ let st size (dst,off) imm = prim (ST (size, IMM)) ~dst ~off ~imm
 let jump_ off = prim (JMP (SRC_IMM, JA)) ~off
 let jmpi_ off reg cond imm = prim (JMP (SRC_IMM, op_of_cond cond)) ~dst:reg ~off ~imm
 let jmp_ off a cond b = prim (JMP (SRC_REG, op_of_cond cond)) ~dst:a ~src:b ~off
+let jump32_ off = prim (JMP32 (SRC_IMM, JA)) ~off
+let jmp32i_ off reg cond imm = prim (JMP32 (SRC_IMM, op_of_cond cond)) ~dst:reg ~off ~imm
+let jmp32_ off a cond b = prim (JMP32 (SRC_REG, op_of_cond cond)) ~dst:a ~src:b ~off
 let ret = prim (JMP (SRC_IMM, EXIT))
 let call imm = prim (JMP (SRC_IMM, CALL)) ~imm
 
 let jump label = Jump (label, unprim @@ jump_ 0)
 let jmpi label reg cond imm = Jump (label, unprim @@ jmpi_ 0 reg cond imm)
 let jmp label a cond b = Jump (label, unprim @@ jmp_ 0 a cond b)
+let jump32 label = Jump (label, unprim @@ jump32_ 0)
+let jmp32i label reg cond imm = Jump (label, unprim @@ jmp32i_ 0 reg cond imm)
+let jmp32 label a cond b = Jump (label, unprim @@ jmp32_ 0 a cond b)
 
 module type ALU =
 sig
@@ -189,7 +196,7 @@ let bpf_st    = 0x02
 let bpf_stx   = 0x03
 let bpf_alu   = 0x04
 let bpf_jmp   = 0x05
-let bpf_ret_unused = 0x06 (* unused, for future if needed *)
+let bpf_jmp32 = 0x06
 let bpf_alu64 = 0x07
 
 let mode x = mode_to_enum x lsl 5
@@ -212,6 +219,7 @@ let encode { op; dst; src; off; imm } =
     | STX (sz, md) -> stld bpf_stx sz md
     | ALU (s, op) -> bpf_alu + op_alu op + source s
     | JMP (s, op) -> bpf_jmp + op_jmp op + source s
+    | JMP32 (s, op) -> bpf_jmp32 + op_jmp op + source s
     | ALU64 (s, op) -> bpf_alu64 + op_alu op + source s
   in
   { op; dst = reg dst; src = reg src; off; imm }
