@@ -291,6 +291,6 @@ let check options l =
     end
 
 let assemble ?(options=default) l =
-  let l = resolve l in
+  let l = if options.disable_all_checks then l else resolve l in
   check options l;
   emit @@ List.map encode l
