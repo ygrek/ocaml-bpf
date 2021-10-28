@@ -11,7 +11,62 @@ type size =
 | DW (** double word = 64 bit *)
 
 type reg = R0 | R1 | R2 | R3 | R4 | R5 | R6 | R7 | R8 | R9 | R10
+type op_alu =
+  | ADD
+  | SUB
+  | MUL
+  | DIV
+  | OR
+  | AND
+  | LSH
+  | RSH
+  | NEG
+  | MOD
+  | XOR
+  | MOV
+  | ARSH
+  | END
+
+type op_jmp =
+  | JA
+  | JEQ
+  | JGT
+  | JGE
+  | JSET
+  | JNE
+  | JSGT
+  | JSGE
+  | CALL
+  | EXIT
+  | JLT
+  | JLE
+  | JSLT
+  | JSLE
+
+type source = SRC_IMM | SRC_REG
+type mode =
+  | IMM
+  | ABS_todo
+  | IND_todo
+  | MEM
+  | LEN_reserved
+  | MSH_reserved
+  | XADD_todo
+type op =
+  | LD of size * mode | LDX of size * mode | ST of size * mode | STX of size * mode
+  | ALU of source * op_alu
+  | ALU64 of source * op_alu
+  | JMP of source * op_jmp
+  | JMP32 of source * op_jmp
 type int16 = int
+type ('op, 'reg) insn_t = {
+    op : 'op;
+    dst : 'reg;
+    src : 'reg;
+    off : int16;
+    imm : int32;
+  }
+type prim = (op, reg) insn_t
 type cond = [
   | `EQ (** equal *)
   | `GE (** greater or equal *)
@@ -24,10 +79,14 @@ type cond = [
   | `LT (** less than *)
   | `SLE (** signed less or equal *)
   | `SLT (** signed less than *)
-]
+  ]
 
 (** Single eBPF instruction. ['label] is type of labels, can be any hashable type, e.g. [string], [int], open variant, etc *)
-type +'label insn
+type 'label insn =
+  | Prim of prim
+  | Label of 'label
+  | Jump of 'label * prim
+  | Double of prim * prim
 
 (** {2 Memory instructions} *)
 
