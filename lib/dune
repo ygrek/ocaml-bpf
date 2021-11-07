@@ -1,2 +1,11 @@
+(menhir
+  (flags --table --explain)
+  (modules parser))
+
+(ocamllex (modules lexer))
+
 (library
+  (public_name bpf)
+  (libraries ppx_deriving.enum menhirLib)
+  (preprocess (pps ppx_jane ppx_deriving.enum))
   (name bpf))
