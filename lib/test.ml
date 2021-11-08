@@ -1,4 +1,5 @@
-open EBPF
+open EBPF_types
+open EBPF_tools
 
 (* check if data starts with the (4-byte) answer to life and everything *)
 let life =

@@ -9,8 +9,22 @@ type size =
 | H (** half-word = 16 bit *)
 | B (** byte *)
 | DW (** double word = 64 bit *)
+[@@deriving enum]
 
-type reg = R0 | R1 | R2 | R3 | R4 | R5 | R6 | R7 | R8 | R9 | R10
+type reg =
+  | R0
+  | R1
+  | R2
+  | R3
+  | R4
+  | R5
+  | R6
+  | R7
+  | R8
+  | R9
+  | R10
+[@@deriving enum]
+
 type op_alu =
   | ADD
   | SUB
@@ -26,6 +40,7 @@ type op_alu =
   | MOV
   | ARSH
   | END
+[@@deriving enum]
 
 type op_jmp =
   | JA
@@ -42,8 +57,10 @@ type op_jmp =
   | JLE
   | JSLT
   | JSLE
+[@@deriving enum]
 
-type source = SRC_IMM | SRC_REG
+type source = SRC_IMM | SRC_REG [@@deriving enum]
+
 type mode =
   | IMM
   | ABS_todo
@@ -52,6 +69,8 @@ type mode =
   | LEN_reserved
   | MSH_reserved
   | XADD_todo
+[@@deriving enum]
+  
 type op =
   | LD of size * mode | LDX of size * mode | ST of size * mode | STX of size * mode
   | ALU of source * op_alu
@@ -168,17 +187,3 @@ val le16 : reg -> 'a insn
 val be16 : reg -> 'a insn
 val le32 : reg -> 'a insn
 val be32 : reg -> 'a insn
-val le64 : reg -> 'a insn
-val be64 : reg -> 'a insn
-
-(** {2 Assembler} *)
-
-type options = {
-  disable_all_checks : bool; (** disable all checks, may generate invalid code *)
-  jump_back : bool; (** allow jump backwards, may result in infinite loop *)
-  jump_self : bool; (** allow jump to self, guaranteed infinite loop *)
-}
-
-val default : options
-
-val assemble : ?options:options -> 'a insn list -> string

@@ -1,6 +1,7 @@
 {
 open Lexing
 open Parser
+open Core
 
 exception LexingError
 
@@ -34,7 +35,7 @@ let newline lexbuf =
   set_start_of_line (lexeme_end lexbuf)
 }
 
-let name = ['A'-'Z' 'a'-'z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '_']*
+let name = '"'['A'-'Z' 'a'-'z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '_']*'"'
 let hex_number = '0' ['x' 'X'] ['0'-'9' 'a'-'f' 'A'-'F' '_']+
 let int = ['0'-'9'] ['0'-'9' '_']*
 
@@ -45,6 +46,19 @@ rule tokenize = parse
   | whitespace  { tokenize lexbuf }
   | '\n'        { newline lexbuf; tokenize lexbuf }
   | eof         { EOF }
+  | "ldxw"      { LDXW }
+  | "$r0"       { R0 }
+  | "$r1"       { R1 }
+  | "$r2"       { R2 }
+  | "movi"      { MOVI }
+  | "jeq"       { JEQ }
+  | "label"     { LABEL }
+  | "ret"       { RET }
+  | "["         { LBRACK }
+  | "]"         { RBRACK }
+  | "+"         { PLUS }
+  | int         { IMM (Lexing.lexeme lexbuf |> Int.of_string) }
+  | name        { NAME (Lexing.lexeme lexbuf |> String.filter ~f:(fun c -> not (Char.equal '"' c))) }
   | _           { raise LexingError }
 
 and comment = parse
