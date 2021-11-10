@@ -187,3 +187,5 @@ val le16 : reg -> 'a insn
 val be16 : reg -> 'a insn
 val le32 : reg -> 'a insn
 val be32 : reg -> 'a insn
+val le64 : reg -> 'a insn
+val be64 : reg -> 'a insn

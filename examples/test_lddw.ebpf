@@ -1,0 +1,9 @@
+ldxdw $r2 [$r1+0]
+lddw $r3 0xDEADBEEF_01020304
+xor $r2 $r3
+ldxdw $r1 [$r1+8]
+mov $r0 1
+jeq $r2 $r1 "Exit"
+mov $r0 0
+label "Exit"
+exit
