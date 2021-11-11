@@ -6,6 +6,6 @@
 
 (library
   (public_name bpf)
-  (libraries core ppx_deriving.enum menhirLib)
+  (libraries ppx_deriving.enum menhirLib)
   (preprocess (pps ppx_jane ppx_deriving.enum))
   (name bpf))

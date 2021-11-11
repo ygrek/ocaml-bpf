@@ -1,7 +1,6 @@
 {
 open Lexing
 open Parser
-open Core
 
 exception LexingError
 
@@ -64,8 +63,9 @@ let hex_helper hex : int =
 	(Str.string_after hex 1) in
   h 0
     (Str.string_after hex 2
-    |> String.lowercase
-    |> String.filter ~f:(fun c -> not (Char.equal '_' c)))
+    |> String.lowercase_ascii
+    |> String.split_on_char '_'
+    |> List.fold_left (^) "")
 }
 
 let name = '"'['A'-'Z' 'a'-'z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '_']*'"'
@@ -160,9 +160,9 @@ rule tokenize = parse
   | "["         { LBRACK }
   | "]"         { RBRACK }
   | "+"         { PLUS }
-  | int         { IMM (Lexing.lexeme lexbuf |> Int.of_string) }
+  | int         { IMM (Lexing.lexeme lexbuf |> int_of_string) }
   | hex_number  { IMM (Lexing.lexeme lexbuf |> hex_helper) }
-  | name        { NAME (Lexing.lexeme lexbuf |> String.filter ~f:(fun c -> not (Char.equal '"' c))) }
+  | name        { NAME (Lexing.lexeme lexbuf |> String.split_on_char '"' |> List.fold_left (^) "") }
   | _           { raise LexingError }
 
 and comment = parse

@@ -1,6 +1,5 @@
 %{
     open EBPF_types
-    open Core
 %}
 
 %start<string EBPF_types.insn list> program
@@ -140,7 +139,7 @@ byteswap_instr:
 
 mem_instr:
   | LDDW r1=reg imm=IMM
-    { lddw r1 (Int64.of_int_exn imm) }
+    { lddw r1 (Int64.of_int imm) }
   | LDXW r1=reg LBRACK r2=reg PLUS off=IMM RBRACK
     { ldx W r1 (r2, off) }
   | LDXH r1=reg LBRACK r2=reg PLUS off=IMM RBRACK
