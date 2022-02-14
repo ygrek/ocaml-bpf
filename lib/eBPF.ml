@@ -1,7 +1,7 @@
 (*
   https://www.kernel.org/doc/Documentation/networking/filter.txt
   https://github.com/iovisor/bpf-docs/blob/master/eBPF.md
-*)
+ *)
 
 let fail fmt = Printf.ksprintf failwith fmt
 
@@ -188,6 +188,8 @@ let le16, be16 = endian 16
 let le32, be32 = endian 32
 let le64, be64 = endian 64
 
+let fail fmt = Printf.ksprintf failwith fmt
+   
 module Bits = struct
 
 let bpf_ld    = 0x00
