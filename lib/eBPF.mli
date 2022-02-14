@@ -189,3 +189,15 @@ val le32 : reg -> 'a insn
 val be32 : reg -> 'a insn
 val le64 : reg -> 'a insn
 val be64 : reg -> 'a insn
+
+(** {2 Assembler} *)
+
+type options = {
+  disable_all_checks : bool; (** disable all checks, may generate invalid code *)
+  jump_back : bool; (** allow jump backwards, may result in infinite loop *)
+  jump_self : bool; (** allow jump to self, guaranteed infinite loop *)
+}
+
+val default : options
+
+val assemble : ?options:options -> 'a insn list -> string

@@ -1,8 +1,8 @@
 %{
-    open EBPF_types
+    open EBPF
 %}
 
-%start<string EBPF_types.insn list> program
+%start<string EBPF.insn list> program
 %token ADD SUB MUL DIV OR AND LSH RSH NEG MOD XOR MOV ARSH
 %token ADD32 SUB32 MUL32 DIV32 OR32 AND32 LSH32 RSH32 NEG32 MOD32 XOR32 MOV32 ARSH32
 %token LDDW LDXW LDXH LDXB LDXDW STW STH STB STDW STXW STXH STXB STXDW
